@@ -22,15 +22,16 @@ import math
 print = functools.partial(print, flush=True)
 
 
-
-
 # Global Variables
 TEST_SIZE = 0.5  # fraction of observations from each protected group
 Theta = np.linspace(0, 1.0, 41)
 eta = (Theta[1] - Theta[0])/2
 DATA_SPLIT_SEED = 4
-_SMALL = True  # small scale dataset for speed and testing
-_CORESET = True
+_SMALL = True       # small scale dataset for speed and testing
+_CORESET = True     # fair coreset for the data
+_UNIFORM = True     # uniform sampled dataset
+_DUPLICATE = True   # to duplicate the sample points proportional to their weights
+_TEST = True # whether you want to have test data or not
 
 
 def coresetSample(x, a, y):
@@ -114,11 +115,114 @@ def coresetSample(x, a, y):
         print("num Points Sampled -- for r = ", r, " and uniq num points = ", uniqPointsSampled)
         print("num Points Sampled -- for r = ", r, " and num points = ", len(sampledX[r]))
 
-
     # for i in weightsOut:
         # print(i)
 
     return sampledX, sampledA, sampledY, uniqPointsSampled
+
+
+def uniformSample(x, a, y, sampleSize):
+    """
+    Randomly subsample a smaller dataset of certain size
+    """
+    numPoints = x.shape[0]
+
+    # gives sizes for each group
+    print("starting to get the uniform sample of size ---....", sampleSize)
+    AkSizes = Counter(a)
+    # AkSizes[0] and AkSizes[1]
+
+    lGroups = len(AkSizes)
+
+    # rvals = [2**i for i in range(0, int(math.log(x.shape[0], 2)-1))]
+    rvals = [i for i in range(1,2)]
+
+    weights = {}
+    sampledX = {}
+    sampledA = {}
+    sampledY = {}
+
+    weightsOut = []
+
+
+    print("Going for sampling...")
+    for j in range(len(rvals)):
+
+        r = rvals[j]
+        weights[r] = []
+        sampledX[r] = pd.DataFrame(columns=x.columns)
+        sampledA[r] = pd.Series([])
+        sampledY[r] = pd.Series([])
+
+        uniqPointsSampled = 0
+
+        # for i in range(sampleSize):
+        uniSampledIds = np.random.choice(range(x.shape[0]), sampleSize)
+
+        for i in range(len(uniSampledIds)):
+            sampledId = uniSampledIds[i]
+
+            weight_i = math.floor(numPoints/sampleSize)
+
+            if _DUPLICATE:
+                for w in range(weight_i):
+                    sampledX[r] = sampledX[r].append(x.iloc[sampledId])
+                    sampledA[r] = sampledA[r].append(pd.Series([a[sampledId]]))
+                    sampledY[r] = sampledY[r].append(pd.Series([y[sampledId]]))
+
+
+        sampledX[r].index = range(len(sampledX[r]))
+        sampledA[r].index = range(len(sampledX[r]))
+        sampledY[r].index = range(len(sampledX[r]))
+
+
+        # print("num Points Sampled -- for r = ", r, " and uniq num points = ", uniqPointsSampled)
+        print("num Points Uniformly Sampled after weighing -- for r = ", r, " and num points = ", len(sampledX[r]))
+
+    # for i in weightsOut:
+        # print(i)
+
+    return sampledX, sampledA, sampledY
+
+
+def train_test_split_groups(x, a, y, random_seed=DATA_SPLIT_SEED):
+    """Split the input dataset into train and test sets
+
+    TODO: Need to make sure both train and test sets have enough
+    observations from each subgroup
+    """
+    # size of the training data
+    groups = list(a.unique())
+    x_train_sets = {}
+    x_test_sets = {}
+    y_train_sets = {}
+    y_test_sets = {}
+    a_train_sets = {}
+    a_test_sets = {}
+
+    for g in groups:
+        x_g = x[a == g]
+        a_g = a[a == g]
+        y_g = y[a == g]
+        x_train_sets[g], x_test_sets[g], a_train_sets[g], a_test_sets[g], y_train_sets[g], y_test_sets[g] = train_test_split(x_g, a_g, y_g, test_size=TEST_SIZE, random_state=random_seed)
+
+    x_train = pd.concat(x_train_sets.values())
+    x_test = pd.concat(x_test_sets.values())
+    y_train = pd.concat(y_train_sets.values())
+    y_test = pd.concat(y_test_sets.values())
+    a_train = pd.concat(a_train_sets.values())
+    a_test = pd.concat(a_test_sets.values())
+
+    # resetting the index
+    x_train.index = range(len(x_train))
+    y_train.index = range(len(y_train))
+    a_train.index = range(len(a_train))
+    x_test.index = range(len(x_test))
+    y_test.index = range(len(y_test))
+    a_test.index = range(len(a_test))
+
+    return x_train, a_train, y_train, x_test, a_test, y_test
+
 
 
 def subsample(x, a, y, size, random_seed=DATA_SPLIT_SEED):
@@ -163,60 +267,118 @@ def fair_train_test(dataset, size, eps_list, learner, constraint="DP",
         x, a, y = subsample(x, a, y, size)
     
 
-    # x_train, a_train, y_train, x_test, a_test, y_test = train_test_split_groups(x, a, y, random_seed=DATA_SPLIT_SEED)
-    x_train, a_train, y_train = x, a, y
-    x_train.index = range(len(x))
-    y_train.index = range(len(y))
-    a_train.index = range(len(a))
+    if _TEST:
+        x_train, a_train, y_train, x_test, a_test, y_test = train_test_split_groups(x, a, y, random_seed=DATA_SPLIT_SEED)
+    else:
+        x_train, a_train, y_train = x, a, y
+
+    x_train.index = range(len(x_train))
+    a_train.index = range(len(a_train))
+    y_train.index = range(len(y_train))
 
     if _CORESET:
         xcor, acor, ycor, uniqSamples = coresetSample(x_train, a_train, y_train)
         print("got the coreset")
 
     if _UNIFORM:
-        xuni, auni, yuni, uniqSamples = uniformSample(x_train, a_train, y_train)
-        print("got the coreset")        
+        xuni, auni, yuni = uniformSample(x_train, a_train, y_train, uniqSamples)
+        print("got the unformly sampled points...")        
 
-    fair_model = {}
+    fair_train_model = {}
+    fair_cor_model = {}
+    fair_uni_model = {}
+    
     train_evaluation = {}
-    cor_fair_model = {}
     cor_evaluation = {}
-    
-    train_cor_evaluation = {}
-    coreset_train_evaluation = {}
-    
-    # test_evaluation = {}
+    uni_evaluation = {}
 
-    # for r
+    cor_on_train_evaluation = {}
+    uni_on_train_evaluation = {}
+    
+    train_on_cor_evaluation = {}
+    train_on_uni_evaluation = {}
+    
+    if _TEST:
+        train_on_test_evaluation = {}
+        cor_on_test_evaluation = {}
+        uni_on_test_evaluation = {}
+
+
+    result = {}
+
+
     for eps in eps_list:
-        fair_model[eps] = fairlearn.train_FairRegression(x_train, a_train, y_train, eps, Theta, learner, constraint, loss, init_cache=init_cache)
+        
+        # ------------------------------------------------------------------------------------------
+        print("Running on full original data....")
 
-        train_evaluation[eps] = evaluate.evaluate_FairModel(x_train, a_train, y_train, loss, fair_model[eps]['exp_grad_result'], Theta)
+        fair_train_model[eps] = fairlearn.train_FairRegression(x_train, a_train, y_train, eps, Theta, learner, constraint, loss, init_cache=init_cache)
 
-        # test_evaluation[eps] = evaluate.evaluate_FairModel(x_test, a_test, y_test, loss, fair_model[eps]['exp_grad_result'], Theta)
+        train_evaluation[eps] = evaluate.evaluate_FairModel(x_train, a_train, y_train, loss, fair_train_model[eps]['exp_grad_result'], Theta)
+
+        if _TEST:
+            train_on_test_evaluation[eps] = evaluate.evaluate_FairModel(x_test, a_test, y_test, loss, fair_train_model[eps]['exp_grad_result'], Theta)
+
+        # ------------------------------------------------------------------------------------------
 
         print("Running on the coreset....")
+        fair_cor_model[eps] = fairlearn.train_FairRegression(xcor[1], acor[1], ycor[1], eps, Theta, learner, constraint, loss, init_cache=init_cache)
 
-        cor_fair_model[eps] = fairlearn.train_FairRegression(xcor[1], acor[1], ycor[1], eps, Theta, learner, constraint, loss, init_cache=init_cache)
+        print("Evaluating Coreset model on Coreset Sketch...")
+        cor_evaluation[eps] = evaluate.evaluate_FairModel(xcor[1], acor[1], ycor[1], loss, fair_cor_model[eps]['exp_grad_result'], Theta)
 
-        cor_evaluation[eps] = evaluate.evaluate_FairModel(xcor[1], acor[1], ycor[1], loss, cor_fair_model[eps]['exp_grad_result'], Theta)
+        print("Applying Coreset model on Train Data")
+        cor_on_train_evaluation[eps] = evaluate.evaluate_FairModel(x_train, a_train, y_train, loss, fair_cor_model[eps]['exp_grad_result'], Theta)
+        
+        if _TEST:
+            print("Applying Coreset model on Test Data")
+            cor_on_test_evaluation[eps] = evaluate.evaluate_FairModel(x_test, a_test, y_test, loss, fair_cor_model[eps]['exp_grad_result'], Theta)
 
-        train_cor_evaluation[eps] = evaluate.evaluate_FairModel(xcor[1], acor[1], ycor[1], loss, fair_model[eps]['exp_grad_result'], Theta)
+        print("Applying Train model on Coreset")
+        train_on_cor_evaluation[eps] = evaluate.evaluate_FairModel(xcor[1], acor[1], ycor[1], loss, fair_train_model[eps]['exp_grad_result'], Theta)
 
-        coreset_train_evaluation[eps] = evaluate.evaluate_FairModel(x_train, a_train, y_train, loss, cor_fair_model[eps]['exp_grad_result'], Theta)
+        # ------------------------------------------------------------------------------------------
+        
+        print("Running on Uniform samples...")
+        fair_uni_model[eps] = fairlearn.train_FairRegression(xuni[1], auni[1], yuni[1], eps, Theta, learner, constraint, loss, init_cache=init_cache)
+        
+        print("Evaluating Uniform model on Uni Sketch...")
+        uni_evaluation[eps] = evaluate.evaluate_FairModel(xuni[1], auni[1], yuni[1], loss, fair_uni_model[eps]['exp_grad_result'], Theta)
+
+        print("Applying Uni model on Train Data")
+        uni_on_train_evaluation[eps] = evaluate.evaluate_FairModel(x_train, a_train, y_train, loss, fair_uni_model[eps]['exp_grad_result'], Theta)
+
+        if _TEST:
+            print("Applying Uni model on Test Data")
+            uni_on_test_evaluation[eps] = evaluate.evaluate_FairModel(x_test, a_test, y_test, loss, fair_uni_model[eps]['exp_grad_result'], Theta)
+
+        print("Applying train model on Uniform Sketch")
+        train_on_uni_evaluation[eps] = evaluate.evaluate_FairModel(xuni[1], auni[1], yuni[1], loss, fair_train_model[eps]['exp_grad_result'], Theta)
+
+        # ------------------------------------------------------------------------------------------
 
         print("done with epsilon", eps)
 
-    result = {}
     result['dataset'] = dataset
     result['learner'] = learner.name
     result['loss'] = loss
     result['constraint'] = constraint
+    
     result['train_eval'] = train_evaluation
     result['cor_eval'] = cor_evaluation
-    result['coreset_train_eval'] = coreset_train_evaluation
-    result['train_coreset_eval'] = train_cor_evaluation
-    # result['test_eval'] = test_evaluation
+    result['uni_eval'] = uni_evaluation
+    
+    result['cor_on_train_eval'] = cor_on_train_evaluation
+    result['uni_on_train_eval'] = uni_on_train_evaluation
+
+    result['train_on_cor_eval'] = train_on_cor_evaluation
+    result['train_on_uni_eval'] = train_on_uni_evaluation
+
+    if _TEST:
+        result['train_on_test_eval'] = train_on_test_evaluation
+        result['cor_on_test_eval'] = cor_on_test_evaluation
+        result['uni_on_test_eval'] = uni_on_test_evaluation
+
     return result
 
 
@@ -348,26 +510,41 @@ def read_result_list(result_list):
     result['learner'] = learner.name
     result['loss'] = loss
     result['constraint'] = constraint
+    
     result['train_eval'] = train_evaluation
     result['cor_eval'] = cor_evaluation
-    result['coreset_train_eval'] = coreset_train_evaluation
-    result['train_coreset_eval'] = train_cor_evaluation
+    result['uni_eval'] = uni_evaluation
+    
+    result['cor_on_train_eval'] = cor_on_train_evaluation
+    result['uni_on_train_eval'] = uni_on_train_evaluation
+
+    result['train_on_cor_eval'] = train_on_cor_evaluation
+    result['train_on_uni_eval'] = train_on_uni_evaluation
+
+    if _TEST:
+        result['train_on_test_eval'] = train_on_test_evaluation
+        result['cor_on_test_eval'] = cor_on_test_evaluation
+        result['uni_on_test_eval'] = uni_on_test_evaluation
     '''
 
 
     for result in result_list:
         learner = result['learner']
         dataset = result['dataset']
+
         train_eval = result['train_eval']
         cor_eval = result['cor_eval']
+        
         coreset_train_eval = result['coreset_train_eval']
         train_coreset_eval = result['train_coreset_eval']
         # test_eval = result['test_eval']
+        
         loss = result['loss']
         constraint = result['constraint']
         learner = result['learner']
         dataset = result['dataset']
         eps_vals = train_eval.keys()
+        
         train_disp_dic = {}
         cor_disp_dic = {}
         cor_train_disp_dic = {}
@@ -465,7 +642,7 @@ def read_result_list(result_list):
 
 # Sample instantiation of running the fair regeression algorithm
 # eps_list = [0.275, 0.31, 1] # range of specified disparity values
-eps_list = [0.1, 0.15] # range of specified disparity values
+eps_list = [0.5, 0.75] # range of specified disparity values
 
 n = 200  # size of the sub-sampled dataset, when the flag SMALL is True
 dataset = 'adult'  # name of the data set
