@@ -37,7 +37,8 @@ _TEST = True # whether you want to have test data or not
 
 userR = float(sys.argv[1])
 userEps = float(sys.argv[2])
-
+datasetName = sys.argv[3]
+subsampleSize = int(sys.argv[4])
 
 
 def coresetSample(x, a, y, rval, levScores):
@@ -423,7 +424,7 @@ def fair_train_test(dataset, size, eps_list, learner, rval, constraint="DP",
             read_result_list([result])
 
             # Saving the result list
-            outfile = open("adult-" + str(runId) + "-" + str(r) + "-" + str(eps) +'.pkl','wb')
+            outfile = open(dataset + str(runId) + "-" + str(r) + "-" + str(eps) + '-' + str(size) + '.pkl','wb')
             pickle.dump(result, outfile)
             outfile.close()
 
@@ -680,8 +681,10 @@ def read_result_list(result_list):
 # eps_list = [0.275, 0.31, 1] # range of specified disparity values
 eps_list = [userEps] # range of specified disparity values
 
-n = 2000  # size of the sub-sampled dataset, when the flag SMALL is True
-dataset = 'adult'  # name of the data set
+# n = 5000  # size of the sub-sampled dataset, when the flag SMALL is True
+n = subsampleSize  # size of the sub-sampled dataset, when the flag SMALL is True
+# dataset = "adult"  # name of the data set
+dataset = datasetName  # name of the data set
 constraint = "DP"  # name of the constraint; so far limited to demographic parity (or statistical parity)
 loss = "square"  # name of the loss function
 learner = solvers.LeastSquaresLearner(Theta) # Specify a supervised learning oracle oracle 
