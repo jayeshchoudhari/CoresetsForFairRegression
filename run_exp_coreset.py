@@ -19,6 +19,7 @@ import solvers as solvers
 import exp_grad as fairlearn
 from collections import Counter
 import math
+import sys
 print = functools.partial(print, flush=True)
 
 
@@ -34,7 +35,12 @@ _DUPLICATE = True   # to duplicate the sample points proportional to their weigh
 _TEST = True # whether you want to have test data or not
 
 
-def coresetSample(x, a, y):
+userR = float(sys.argv[1])
+userEps = float(sys.argv[2])
+
+
+
+def coresetSample(x, a, y, rval):
     """
     Randomly subsample a smaller dataset of certain size
     """
@@ -64,64 +70,73 @@ def coresetSample(x, a, y):
     samplingProb = levScores + tprob
 
     # rvals = [2**i for i in range(0, int(math.log(x.shape[0], 2)-1))]
-    rvals = [i for i in range(1,2)]
+    # rvals = [0.5, 1, 1.5, 2.0]
 
     weights = {}
     sampledX = {}
     sampledA = {}
     sampledY = {}
+    uniqueForRVal = {}
 
     weightsOut = []
 
-
     print("Going for sampling...")
-    for j in range(len(rvals)):
+    # for j in range(len(rvals)):
 
-        r = rvals[j]
-        weights[r] = []
-        sampledX[r] = pd.DataFrame(columns=x.columns)
-        sampledA[r] = pd.Series([])
-        sampledY[r] = pd.Series([])
+    # r = rvals[j]
+    r = rval
 
-        uniqPointsSampled = 0
+    weights[r] = []
+    sampledX[r] = pd.DataFrame(columns=x.columns)
+    sampledA[r] = pd.Series([])
+    sampledY[r] = pd.Series([])
 
-        for i in range(len(x)):
-            tossProb = min(r*samplingProb[i], 1)
-            uniSample =  np.random.random_sample()
+    uniqPointsSampled = 0
 
-            if uniSample <= tossProb:
-                uniqPointsSampled += 1
-                weight_i = 1.0/tossProb
-                weights[r].append(weight_i)
-                
-                weight_i = math.floor(weight_i)
+    for i in range(len(x)):
+        tossProb = min(r*samplingProb[i], 1)
+        uniSample =  np.random.random_sample()
 
-                if weight_i < 1:
-                    weight_i = 1
+        if uniSample <= tossProb:
+            uniqPointsSampled += 1
+            weight_i = 1.0/tossProb
+            weights[r].append(weight_i)
+            
+            weight_i = math.floor(weight_i)
 
-                # weightsOut.append(weight_i)
+            if weight_i < 1:
+                weight_i = 1
 
+            # weightsOut.append(weight_i)
+            if _DUPLICATE:
                 # add point weight many times
                 for w in range(weight_i):
                     sampledX[r] = sampledX[r].append(x.iloc[i])
                     sampledA[r] = sampledA[r].append(pd.Series([a[i]]))
                     sampledY[r] = sampledY[r].append(pd.Series([y[i]]))
+            else:
+                sampledX[r] = sampledX[r].append(x.iloc[i])
+                sampledA[r] = sampledA[r].append(pd.Series([a[i]]))
+                sampledY[r] = sampledY[r].append(pd.Series([y[i]]))
 
-        sampledX[r].index = range(len(sampledX[r]))
-        sampledA[r].index = range(len(sampledX[r]))
-        sampledY[r].index = range(len(sampledX[r]))
+
+    sampledX[r].index = range(len(sampledX[r]))
+    sampledA[r].index = range(len(sampledX[r]))
+    sampledY[r].index = range(len(sampledX[r]))
 
 
-        print("num Points Sampled -- for r = ", r, " and uniq num points = ", uniqPointsSampled)
-        print("num Points Sampled -- for r = ", r, " and num points = ", len(sampledX[r]))
+    print("num Points Sampled -- for r = ", r, " and uniq num points = ", uniqPointsSampled)
+    print("num Points Sampled -- for r = ", r, " and num points = ", len(sampledX[r]))
+
+    uniqueForRVal[r] = uniqPointsSampled
 
     # for i in weightsOut:
         # print(i)
 
-    return sampledX, sampledA, sampledY, uniqPointsSampled
+    return sampledX[r], sampledA[r], sampledY[r], uniqueForRVal[r]
 
 
-def uniformSample(x, a, y, sampleSize):
+def uniformSample(x, a, y, sampleSize, rval):
     """
     Randomly subsample a smaller dataset of certain size
     """
@@ -135,7 +150,7 @@ def uniformSample(x, a, y, sampleSize):
     lGroups = len(AkSizes)
 
     # rvals = [2**i for i in range(0, int(math.log(x.shape[0], 2)-1))]
-    rvals = [i for i in range(1,2)]
+    # rvals = [0.5, 1.0, 1.5, 2.0]
 
     weights = {}
     sampledX = {}
@@ -146,43 +161,46 @@ def uniformSample(x, a, y, sampleSize):
 
 
     print("Going for sampling...")
-    for j in range(len(rvals)):
+    # for j in range(len(rvals)):
 
-        r = rvals[j]
-        weights[r] = []
-        sampledX[r] = pd.DataFrame(columns=x.columns)
-        sampledA[r] = pd.Series([])
-        sampledY[r] = pd.Series([])
+    r = rval
+    weights[r] = []
+    sampledX[r] = pd.DataFrame(columns=x.columns)
+    sampledA[r] = pd.Series([])
+    sampledY[r] = pd.Series([])
 
-        uniqPointsSampled = 0
+    uniqPointsSampled = 0
 
-        # for i in range(sampleSize):
-        uniSampledIds = np.random.choice(range(x.shape[0]), sampleSize)
+    # for i in range(sampleSize):
+    uniSampledIds = np.random.choice(range(x.shape[0]), sampleSize)
 
-        for i in range(len(uniSampledIds)):
-            sampledId = uniSampledIds[i]
+    for i in range(len(uniSampledIds)):
+        sampledId = uniSampledIds[i]
 
-            weight_i = math.floor(numPoints/sampleSize)
+        weight_i = math.floor(numPoints/sampleSize)
 
-            if _DUPLICATE:
-                for w in range(weight_i):
-                    sampledX[r] = sampledX[r].append(x.iloc[sampledId])
-                    sampledA[r] = sampledA[r].append(pd.Series([a[sampledId]]))
-                    sampledY[r] = sampledY[r].append(pd.Series([y[sampledId]]))
+        if _DUPLICATE:
+            for w in range(weight_i):
+                sampledX[r] = sampledX[r].append(x.iloc[sampledId])
+                sampledA[r] = sampledA[r].append(pd.Series([a[sampledId]]))
+                sampledY[r] = sampledY[r].append(pd.Series([y[sampledId]]))
+        else:
+            sampledX[r] = sampledX[r].append(x.iloc[sampledId])
+            sampledA[r] = sampledA[r].append(pd.Series([a[sampledId]]))
+            sampledY[r] = sampledY[r].append(pd.Series([y[sampledId]]))
+
+    sampledX[r].index = range(len(sampledX[r]))
+    sampledA[r].index = range(len(sampledX[r]))
+    sampledY[r].index = range(len(sampledX[r]))
 
 
-        sampledX[r].index = range(len(sampledX[r]))
-        sampledA[r].index = range(len(sampledX[r]))
-        sampledY[r].index = range(len(sampledX[r]))
-
-
-        # print("num Points Sampled -- for r = ", r, " and uniq num points = ", uniqPointsSampled)
-        print("num Points Uniformly Sampled after weighing -- for r = ", r, " and num points = ", len(sampledX[r]))
+    # print("num Points Sampled -- for r = ", r, " and uniq num points = ", uniqPointsSampled)
+    print("num Points Uniformly Sampled after weighing -- for r = ", r, " and num points = ", len(sampledX[r]))
 
     # for i in weightsOut:
         # print(i)
 
-    return sampledX, sampledA, sampledY
+    return sampledX[r], sampledA[r], sampledY[r]
 
 
 def train_test_split_groups(x, a, y, random_seed=DATA_SPLIT_SEED):
@@ -237,7 +255,7 @@ def subsample(x, a, y, size, random_seed=DATA_SPLIT_SEED):
     return x1, a1, y1
 
 
-def fair_train_test(dataset, size, eps_list, learner, constraint="DP",
+def fair_train_test(dataset, size, eps_list, learner, rval, constraint="DP",
                    loss="square", random_seed=DATA_SPLIT_SEED, init_cache=[]):
     """
     Input:
@@ -263,52 +281,27 @@ def fair_train_test(dataset, size, eps_list, learner, constraint="DP",
     else:
         raise Exception('DATA SET NOT FOUND!')
   
+
     if _SMALL:
         x, a, y = subsample(x, a, y, size)
-    
 
     if _TEST:
         x_train, a_train, y_train, x_test, a_test, y_test = train_test_split_groups(x, a, y, random_seed=DATA_SPLIT_SEED)
     else:
         x_train, a_train, y_train = x, a, y
-
+    
     x_train.index = range(len(x_train))
     a_train.index = range(len(a_train))
     y_train.index = range(len(y_train))
 
-    if _CORESET:
-        xcor, acor, ycor, uniqSamples = coresetSample(x_train, a_train, y_train)
-        print("got the coreset")
-
-    if _UNIFORM:
-        xuni, auni, yuni = uniformSample(x_train, a_train, y_train, uniqSamples)
-        print("got the unformly sampled points...")        
-
-    fair_train_model = {}
-    fair_cor_model = {}
-    fair_uni_model = {}
-    
-    train_evaluation = {}
-    cor_evaluation = {}
-    uni_evaluation = {}
-
-    cor_on_train_evaluation = {}
-    uni_on_train_evaluation = {}
-    
-    train_on_cor_evaluation = {}
-    train_on_uni_evaluation = {}
-    
-    if _TEST:
-        train_on_test_evaluation = {}
-        cor_on_test_evaluation = {}
-        uni_on_test_evaluation = {}
-
-
-    result = {}
-
-
     for eps in eps_list:
-        
+
+        fair_train_model = {}
+        train_evaluation = {}
+        if _TEST:
+            train_on_test_evaluation = {}
+
+
         # ------------------------------------------------------------------------------------------
         print("Running on full original data....")
 
@@ -319,185 +312,122 @@ def fair_train_test(dataset, size, eps_list, learner, constraint="DP",
         if _TEST:
             train_on_test_evaluation[eps] = evaluate.evaluate_FairModel(x_test, a_test, y_test, loss, fair_train_model[eps]['exp_grad_result'], Theta)
 
+        print("Done for full original data.... for eps = ", eps, "\n\n")
         # ------------------------------------------------------------------------------------------
 
-        print("Running on the coreset....")
-        fair_cor_model[eps] = fairlearn.train_FairRegression(xcor[1], acor[1], ycor[1], eps, Theta, learner, constraint, loss, init_cache=init_cache)
+        for runId in range(1,3):
 
-        print("Evaluating Coreset model on Coreset Sketch...")
-        cor_evaluation[eps] = evaluate.evaluate_FairModel(xcor[1], acor[1], ycor[1], loss, fair_cor_model[eps]['exp_grad_result'], Theta)
+            print("RunId = ", runId, " For Epsilon = ", eps, "\n\n")
 
-        print("Applying Coreset model on Train Data")
-        cor_on_train_evaluation[eps] = evaluate.evaluate_FairModel(x_train, a_train, y_train, loss, fair_cor_model[eps]['exp_grad_result'], Theta)
+            result = {}
+
+            fair_cor_model = {}
+            cor_evaluation = {}
+            cor_on_train_evaluation = {}
+            train_on_cor_evaluation = {}
+
+            fair_uni_model = {}
+            uni_evaluation = {}
+            uni_on_train_evaluation = {}
+            train_on_uni_evaluation = {}
+
+            if _TEST:
+                cor_on_test_evaluation = {}
+                uni_on_test_evaluation = {}
+
+
+            if _CORESET:
+
+                xcor, acor, ycor, uniqSamples = coresetSample(x_train, a_train, y_train, rval)
+                print("got the coreset")
+
+
+                # ------------------------------------------------------------------------------------------
+
+                print("Running on the coreset....")
+                fair_cor_model[eps] = fairlearn.train_FairRegression(xcor, acor, ycor, eps, Theta, learner, constraint, loss, init_cache=init_cache)
+
+                print("Evaluating Coreset model on Coreset Sketch...")
+                cor_evaluation[eps] = evaluate.evaluate_FairModel(xcor, acor, ycor, loss, fair_cor_model[eps]['exp_grad_result'], Theta)
+
+                print("Applying Coreset model on Train Data")
+                cor_on_train_evaluation[eps] = evaluate.evaluate_FairModel(x_train, a_train, y_train, loss, fair_cor_model[eps]['exp_grad_result'], Theta)
+                
+                if _TEST:
+                    print("Applying Coreset model on Test Data")
+                    cor_on_test_evaluation[eps] = evaluate.evaluate_FairModel(x_test, a_test, y_test, loss, fair_cor_model[eps]['exp_grad_result'], Theta)
+
+                print("Applying Train model on Coreset")
+                train_on_cor_evaluation[eps] = evaluate.evaluate_FairModel(xcor, acor, ycor, loss, fair_train_model[eps]['exp_grad_result'], Theta)
+
+
+
+
+            if _UNIFORM:
+
+                xuni, auni, yuni = uniformSample(x_train, a_train, y_train, uniqSamples, rval)
+                print("got the unformly sampled points...")
+                
+
+                # ------------------------------------------------------------------------------------------
+                
+                print("Running on Uniform samples...")
+                fair_uni_model[eps] = fairlearn.train_FairRegression(xuni, auni, yuni, eps, Theta, learner, constraint, loss, init_cache=init_cache)
+                
+                print("Evaluating Uniform model on Uni Sketch...")
+                uni_evaluation[eps] = evaluate.evaluate_FairModel(xuni, auni, yuni, loss, fair_uni_model[eps]['exp_grad_result'], Theta)
+
+                print("Applying Uni model on Train Data")
+                uni_on_train_evaluation[eps] = evaluate.evaluate_FairModel(x_train, a_train, y_train, loss, fair_uni_model[eps]['exp_grad_result'], Theta)
+
+                if _TEST:
+                    print("Applying Uni model on Test Data")
+                    uni_on_test_evaluation[eps] = evaluate.evaluate_FairModel(x_test, a_test, y_test, loss, fair_uni_model[eps]['exp_grad_result'], Theta)
+
+                print("Applying train model on Uniform Sketch")
+                train_on_uni_evaluation[eps] = evaluate.evaluate_FairModel(xuni, auni, yuni, loss, fair_train_model[eps]['exp_grad_result'], Theta)
+
+                # ------------------------------------------------------------------------------------------
         
-        if _TEST:
-            print("Applying Coreset model on Test Data")
-            cor_on_test_evaluation[eps] = evaluate.evaluate_FairModel(x_test, a_test, y_test, loss, fair_cor_model[eps]['exp_grad_result'], Theta)
+            
 
-        print("Applying Train model on Coreset")
-        train_on_cor_evaluation[eps] = evaluate.evaluate_FairModel(xcor[1], acor[1], ycor[1], loss, fair_train_model[eps]['exp_grad_result'], Theta)
+            result['dataset'] = dataset
+            result['learner'] = learner.name
+            result['loss'] = loss
+            result['constraint'] = constraint
+            
+            result['train_eval'] = train_evaluation
+            if _TEST:
+                result['train_on_test_eval'] = train_on_test_evaluation
+            
 
-        # ------------------------------------------------------------------------------------------
-        
-        print("Running on Uniform samples...")
-        fair_uni_model[eps] = fairlearn.train_FairRegression(xuni[1], auni[1], yuni[1], eps, Theta, learner, constraint, loss, init_cache=init_cache)
-        
-        print("Evaluating Uniform model on Uni Sketch...")
-        uni_evaluation[eps] = evaluate.evaluate_FairModel(xuni[1], auni[1], yuni[1], loss, fair_uni_model[eps]['exp_grad_result'], Theta)
+            result['cor_eval'] = cor_evaluation
+            result['cor_on_train_eval'] = cor_on_train_evaluation
+            result['train_on_cor_eval'] = train_on_cor_evaluation
+            if _TEST:
+                result['cor_on_test_eval'] = cor_on_test_evaluation
 
-        print("Applying Uni model on Train Data")
-        uni_on_train_evaluation[eps] = evaluate.evaluate_FairModel(x_train, a_train, y_train, loss, fair_uni_model[eps]['exp_grad_result'], Theta)
 
-        if _TEST:
-            print("Applying Uni model on Test Data")
-            uni_on_test_evaluation[eps] = evaluate.evaluate_FairModel(x_test, a_test, y_test, loss, fair_uni_model[eps]['exp_grad_result'], Theta)
+            result['uni_eval'] = uni_evaluation
+            result['uni_on_train_eval'] = uni_on_train_evaluation
+            result['train_on_uni_eval'] = train_on_uni_evaluation
+            if _TEST:
+                result['uni_on_test_eval'] = uni_on_test_evaluation
 
-        print("Applying train model on Uniform Sketch")
-        train_on_uni_evaluation[eps] = evaluate.evaluate_FairModel(xuni[1], auni[1], yuni[1], loss, fair_train_model[eps]['exp_grad_result'], Theta)
 
-        # ------------------------------------------------------------------------------------------
+            print("\n\n\n")
+            print("RunId = ", runId, " For Epsilon = ", eps)
+
+            read_result_list([result])
+
+            # Saving the result list
+            outfile = open("adult-" + str(r) + "-" + str(eps) +'.pkl','wb')
+            pickle.dump(result, outfile)
+            outfile.close()
 
         print("done with epsilon", eps)
 
-    result['dataset'] = dataset
-    result['learner'] = learner.name
-    result['loss'] = loss
-    result['constraint'] = constraint
-    
-    result['train_eval'] = train_evaluation
-    result['cor_eval'] = cor_evaluation
-    result['uni_eval'] = uni_evaluation
-    
-    result['cor_on_train_eval'] = cor_on_train_evaluation
-    result['uni_on_train_eval'] = uni_on_train_evaluation
-
-    result['train_on_cor_eval'] = train_on_cor_evaluation
-    result['train_on_uni_eval'] = train_on_uni_evaluation
-
-    if _TEST:
-        result['train_on_test_eval'] = train_on_test_evaluation
-        result['cor_on_test_eval'] = cor_on_test_evaluation
-        result['uni_on_test_eval'] = uni_on_test_evaluation
-
-    return result
-
-
-def base_train_test(dataset, size, base_solver, loss="square",
-                    random_seed=DATA_SPLIT_SEED):
-    """
-    Given a baseline method, train and test on a dataset.
-
-    Input:
-    - dataset name
-    - size parameter for data parser
-    - base_solver: the solver for baseline benchmark
-    - loss: loss function name
-    - random_seed for data splitting
-
-    Output: Results for
-    - baseline output
-    """
-    if dataset == 'law_school':
-        x, a, y = parser.clean_lawschool_full()
-        sens_attr = 'race'
-    elif dataset == 'communities':
-        x, a, y = parser.clean_communities_full()
-        sens_attr = 'race'
-    elif dataset == 'adult':
-        x, a, y = parser.clean_adult_full()
-        sens_attr = 'sex'
-    else:
-        raise Exception('DATA SET NOT FOUND!')
-
-
-    if _SMALL:
-        x, a, y = subsample(x, a, y, size)
-
-    x_train, a_train, y_train, x_test, a_test, y_test = train_test_split_groups(x, a, y, random_seed=DATA_SPLIT_SEED)
-
-    if base_solver.name == "SEO":
-        # Evaluate SEO method
-        base_solver.fit(x_train, y_train, sens_attr)
-        h_base = lambda X: base_solver.predict(X, sens_attr)
-    else:
-        base_solver.fit(x_train, y_train)
-        h_base = lambda X: base_solver.predict(X)
-
-    base_train_eval = evaluate.eval_BenchmarkModel(x_train, a_train,
-                                                   y_train, h_base,
-                                                   loss)
-    base_test_eval = evaluate.eval_BenchmarkModel(x_test, a_test,
-                                                  y_test, h_base,
-                                                  loss)
-    result = {}
-    result['base_train_eval'] = base_train_eval
-    result['base_test_eval'] = base_test_eval
-    result['loss'] = loss
-    result['learner'] = base_solver.name
-    result['dataset'] = dataset
-    return result
-
-
-def square_loss_benchmark(dataset, n):
-    """
-    Run the set of unconstrained methods for square loss
-    OLS_Base_Learner
-    RF_Base_Regressor
-    XGB_Base_Regressor
-    """
-    loss = 'square'
-    base_solver1 = solvers.OLS_Base_Learner()
-    base_res1 = base_train_test(dataset, n, base_solver1, loss=loss,
-                                random_seed=DATA_SPLIT_SEED)
-
-    base_solver4 = solvers.SEO_Learner()
-    base_res4 = base_train_test(dataset, n, base_solver4, loss=loss,
-                                random_seed=DATA_SPLIT_SEED)
-
-    if _SMALL:
-        bl = [base_res1, base_res4]
-    else:
-        base_solver2 = solvers.RF_Base_Regressor(max_depth=4,
-                                                 n_estimators=200)
-        base_res2 = base_train_test(dataset, n, base_solver2,
-                                    loss=loss,
-                                    random_seed=DATA_SPLIT_SEED)
-
-        base_solver3 = solvers.XGB_Base_Regressor(max_depth=4,
-                                                  n_estimators=200)
-        base_res3 = base_train_test(dataset, n, base_solver3,
-                                    loss=loss,
-                                    random_seed=DATA_SPLIT_SEED)
-        
-        bl = [base_res1, base_res2, base_res3, base_res4]
-    return bl
-
-
-def log_loss_benchmark(dataset='adult', size=100):
-    """
-    Run the set of unconstrained methods for logistic loss
-    LogisticRegression
-    XGB_Base_Classifier
-    """
-    loss = 'logistic'
-    base_solver1 = solvers.Logistic_Base_Learner(C=10)
-    base_res1 = base_train_test(dataset, size, base_solver1, loss=loss,
-                                random_seed=DATA_SPLIT_SEED)
-    print("Done with Logistic base")
-
-    if _SMALL:
-        bl = [base_res1]
-    else:
-        base_solver3 = solvers.XGB_Base_Classifier(max_depth=3,
-                                                   n_estimators=150,
-                                                   gamma=2)
-        base_res3 = base_train_test(dataset, size, base_solver3, loss=loss,
-                                random_seed=DATA_SPLIT_SEED)
-        print("Done with XGB base")
-        bl = [base_res1, base_res3]
-    return bl
-
-
+    return None
 
 
 def read_result_list(result_list):
@@ -505,39 +435,24 @@ def read_result_list(result_list):
     Parse the experiment a list of experiment result and print out info
     """
 
-    '''
-    result['dataset'] = dataset
-    result['learner'] = learner.name
-    result['loss'] = loss
-    result['constraint'] = constraint
-    
-    result['train_eval'] = train_evaluation
-    result['cor_eval'] = cor_evaluation
-    result['uni_eval'] = uni_evaluation
-    
-    result['cor_on_train_eval'] = cor_on_train_evaluation
-    result['uni_on_train_eval'] = uni_on_train_evaluation
-
-    result['train_on_cor_eval'] = train_on_cor_evaluation
-    result['train_on_uni_eval'] = train_on_uni_evaluation
-
-    if _TEST:
-        result['train_on_test_eval'] = train_on_test_evaluation
-        result['cor_on_test_eval'] = cor_on_test_evaluation
-        result['uni_on_test_eval'] = uni_on_test_evaluation
-    '''
-
-
     for result in result_list:
         learner = result['learner']
         dataset = result['dataset']
 
         train_eval = result['train_eval']
         cor_eval = result['cor_eval']
+        uni_eval = result['uni_eval']
         
-        coreset_train_eval = result['coreset_train_eval']
-        train_coreset_eval = result['train_coreset_eval']
-        # test_eval = result['test_eval']
+        cor_on_train_eval = result['cor_on_train_eval']
+        uni_on_train_eval = result['uni_on_train_eval']
+
+        train_on_cor_eval = result['train_on_cor_eval']
+        train_on_uni_eval = result['train_on_uni_eval']
+
+        if _TEST:
+            train_on_test_eval = result['train_on_test_eval']
+            cor_on_test_eval = result['cor_on_test_eval']
+            uni_on_test_eval = result['uni_on_test_eval']
         
         loss = result['loss']
         constraint = result['constraint']
@@ -547,60 +462,134 @@ def read_result_list(result_list):
         
         train_disp_dic = {}
         cor_disp_dic = {}
-        cor_train_disp_dic = {}
-        train_cor_disp_dic = {}
+        uni_disp_dic = {}
+
+        cor_on_train_disp_dic = {}
+        uni_on_train_disp_dic = {}
+        
+        train_on_cor_disp_dic = {}
+        train_on_uni_disp_dic = {}
 
         train_err_dic = {}
         cor_err_dic = {}
-        cor_train_err_dic = {}
-        train_cor_err_dic = {}
+        uni_err_dic = {}
+
+        cor_on_train_err_dic = {}
+        uni_on_train_err_dic = {}
         
-        test_disp_dic = {}
-        test_err_dic = {}
-        test_loss_std_dic = {}
-        test_disp_dev_dic = {}
+        train_on_cor_err_dic = {}
+        train_on_uni_err_dic = {}
+        
+        if _TEST:
+            train_on_test_disp_dic = {}
+            train_on_test_err_dic = {}
+
+            cor_on_test_disp_dic = {}
+            cor_on_test_err_dic = {}
+
+            uni_on_test_disp_dic = {}
+            uni_on_test_err_dic = {}
+
+            test_loss_std_dic = {}
+            train_on_test_disp_dev_dic = {}
 
         for eps in eps_vals:
             train_disp = train_eval[eps]["DP_disp"]
             cor_disp = cor_eval[eps]["DP_disp"]
-            cor_train_disp = coreset_train_eval[eps]["DP_disp"]
-            train_cor_disp = train_coreset_eval[eps]["DP_disp"]
-            # test_disp = test_eval[eps]["DP_disp"]
+            uni_disp = uni_eval[eps]["DP_disp"]
+            
+            cor_on_train_disp = cor_on_train_eval[eps]["DP_disp"]
+            uni_on_train_disp = uni_on_train_eval[eps]["DP_disp"]
+
+            train_on_cor_disp = train_on_cor_eval[eps]["DP_disp"]
+            train_on_uni_disp = train_on_uni_eval[eps]["DP_disp"]
+
+            if _TEST:
+                train_on_test_disp = train_on_test_eval[eps]["DP_disp"]
+                cor_on_test_disp = cor_on_test_eval[eps]["DP_disp"]
+                uni_on_test_disp = uni_on_test_eval[eps]["DP_disp"]
+
             train_disp_dic[eps] = train_disp
             cor_disp_dic[eps] = cor_disp
-            cor_train_disp_dic[eps] = cor_train_disp
-            train_cor_disp_dic[eps] = train_cor_disp
-            # test_disp_dic[eps] = test_disp
+            uni_disp_dic[eps] = uni_disp
 
-            # test_loss_std_dic[eps] = test_eval[eps]['loss_std']
-            # test_disp_dev_dic[eps] = test_eval[eps]['disp_std']
+            cor_on_train_disp_dic[eps] = cor_on_train_disp
+            train_on_cor_disp_dic[eps] = train_on_cor_disp
+
+            uni_on_train_disp_dic[eps] = uni_on_train_disp
+            train_on_uni_disp_dic[eps] = train_on_uni_disp
+
+            if _TEST:
+                train_on_test_disp_dic[eps] = train_on_test_disp
+                cor_on_test_disp_dic[eps] = cor_on_test_disp
+                uni_on_test_disp_dic[eps] = uni_on_test_disp
+
+            # test_loss_std_dic[eps] = train_on_test_eval[eps]['loss_std']
+            # train_on_test_disp_dev_dic[eps] = train_on_test_eval[eps]['disp_std']
 
             if loss == "square":
                 # taking the RMSE
                 train_err_dic[eps] = np.sqrt(train_eval[eps]['weighted_loss'])
                 cor_err_dic[eps] = np.sqrt(cor_eval[eps]['weighted_loss'])
-                cor_train_err_dic[eps] = np.sqrt(coreset_train_eval[eps]['weighted_loss'])
-                train_cor_err_dic[eps] = np.sqrt(train_coreset_eval[eps]['weighted_loss'])
-                # test_err_dic[eps] = np.sqrt(test_eval[eps]['weighted_loss'])
+                uni_err_dic[eps] = np.sqrt(uni_eval[eps]['weighted_loss'])
+
+                cor_on_train_err_dic[eps] = np.sqrt(cor_on_train_eval[eps]['weighted_loss'])
+                train_on_cor_err_dic[eps] = np.sqrt(train_on_cor_eval[eps]['weighted_loss'])
+
+                uni_on_train_err_dic[eps] = np.sqrt(uni_on_train_eval[eps]['weighted_loss'])
+                train_on_uni_err_dic[eps] = np.sqrt(train_on_uni_eval[eps]['weighted_loss'])
+
+                if _TEST:
+                    train_on_test_err_dic[eps] = np.sqrt(train_on_test_eval[eps]['weighted_loss'])
+                    cor_on_test_err_dic[eps] = np.sqrt(cor_on_test_eval[eps]['weighted_loss'])
+                    uni_on_test_err_dic[eps] = np.sqrt(uni_on_test_eval[eps]['weighted_loss'])
 
             else:
                 train_err_dic[eps] = (train_eval[eps]['weighted_loss'])
-                cor_err_dic[eps] = (cor_train_eval[eps]['weighted_loss'])
-                cor_train_err_dic[eps] = (coreset_train_eval[eps]['weighted_loss'])
-                train_cor_err_dic[eps] = (train_coreset_eval[eps]['weighted_loss'])
-                # test_err_dic[eps] = (test_eval[eps]['weighted_loss'])
+                cor_err_dic[eps] = (cor_eval[eps]['weighted_loss'])
+                uni_err_dic[eps] = (uni_eval[eps]['weighted_loss'])
+
+                cor_on_train_err_dic[eps] = (cor_on_train_eval[eps]['weighted_loss'])
+                train_on_cor_err_dic[eps] = (train_on_cor_eval[eps]['weighted_loss'])
+
+                uni_on_train_err_dic[eps] = (uni_on_train_eval[eps]['weighted_loss'])
+                train_on_uni_err_dic[eps] = (train_on_uni_eval[eps]['weighted_loss'])
+                
+                if _TEST:
+                    train_on_test_err_dic[eps] = (train_on_test_eval[eps]['weighted_loss'])
+                    cor_on_test_err_dic[eps] = (cor_on_test_eval[eps]['weighted_loss'])
+                    uni_on_test_err_dic[eps] = (uni_on_test_eval[eps]['weighted_loss'])
 
         # taking the pareto frontier
         train_disp_list = [train_disp_dic[k] for k in eps_vals]
         cor_disp_list = [cor_disp_dic[k] for k in eps_vals]
-        cor_train_disp_list = [cor_train_disp_dic[k] for k in eps_vals]
-        train_cor_disp_list = [train_cor_disp_dic[k] for k in eps_vals]
-        # test_disp_list = [test_disp_dic[k] for k in eps_vals]
+        uni_disp_list = [uni_disp_dic[k] for k in eps_vals]
+
+        cor_on_train_disp_list = [cor_on_train_disp_dic[k] for k in eps_vals]
+        train_on_cor_disp_list = [train_on_cor_disp_dic[k] for k in eps_vals]
+
+        uni_on_train_disp_list = [uni_on_train_disp_dic[k] for k in eps_vals]
+        train_on_uni_disp_list = [train_on_uni_disp_dic[k] for k in eps_vals]
+
+        if _TEST:
+            train_on_test_disp_list = [train_on_test_disp_dic[k] for k in eps_vals]
+            cor_on_test_disp_list = [cor_on_test_disp_dic[k] for k in eps_vals]
+            uni_on_test_disp_list = [uni_on_test_disp_dic[k] for k in eps_vals]
+
         train_err_list = [train_err_dic[k] for k in eps_vals]
         cor_err_list = [cor_err_dic[k] for k in eps_vals]
-        cor_train_err_list = [cor_train_err_dic[k] for k in eps_vals]
-        train_cor_err_list = [train_cor_err_dic[k] for k in eps_vals]
-        # test_err_list = [test_err_dic[k] for k in eps_vals]
+        uni_err_list = [uni_err_dic[k] for k in eps_vals]
+
+        cor_on_train_err_list = [cor_on_train_err_dic[k] for k in eps_vals]
+        train_on_cor_err_list = [train_on_cor_err_dic[k] for k in eps_vals]
+
+        uni_on_train_err_list = [uni_on_train_err_dic[k] for k in eps_vals]
+        train_on_uni_err_list = [train_on_uni_err_dic[k] for k in eps_vals]
+
+        if _TEST:
+            train_on_test_err_list = [train_on_test_err_dic[k] for k in eps_vals]
+            cor_on_test_err_list = [cor_on_test_err_dic[k] for k in eps_vals]
+            uni_on_test_err_list = [uni_on_test_err_dic[k] for k in eps_vals]
 
         if loss == "square":
             show_loss = 'RMSE'
@@ -608,41 +597,86 @@ def read_result_list(result_list):
             show_loss = loss
 
 
-        info = str('Dataset: '+dataset + '; loss: ' + loss + '; Solver: '+ learner)
+        info = str('Dataset: '+ dataset + '; loss: ' + loss + '; Solver: '+ learner)
         print(info)
 
         train_data = {'specified epsilon': list(eps_vals), 'SP disparity':train_disp_list, show_loss : train_err_list}
         train_performance = pd.DataFrame(data=train_data)
 
-        cor_data = {'specified epsilon': list(eps_vals), 'SP disparity':cor_train_disp_list, show_loss : cor_err_list}
+        cor_data = {'specified epsilon': list(eps_vals), 'SP disparity':cor_disp_list, show_loss : cor_err_list}
         cor_performance = pd.DataFrame(data=cor_data)
 
+        uni_data = {'specified epsilon': list(eps_vals), 'SP disparity':uni_disp_list, show_loss : uni_err_list}
+        uni_performance = pd.DataFrame(data=uni_data)
 
-        cor_train_data = {'specified epsilon': list(eps_vals), 'SP disparity':cor_train_disp_list, show_loss : cor_train_err_list}
-        cor_train_performance = pd.DataFrame(data=cor_train_data)  
+        cor_on_train_data = {'specified epsilon': list(eps_vals), 'SP disparity':cor_on_train_disp_list, show_loss : cor_on_train_err_list}
+        cor_on_train_performance = pd.DataFrame(data=cor_on_train_data)  
 
-        train_cor_data = {'specified epsilon': list(eps_vals), 'SP disparity':train_cor_disp_list, show_loss : train_cor_err_list}
-        train_cor_performance = pd.DataFrame(data=train_cor_data)        
-        # test_data = {'specified epsilon': list(eps_vals), 'SP disparity':test_disp_list, show_loss : test_err_list}
-        # test_performance = pd.DataFrame(data=test_data)
+        train_on_cor_data = {'specified epsilon': list(eps_vals), 'SP disparity':train_on_cor_disp_list, show_loss : train_on_cor_err_list}
+        train_on_cor_performance = pd.DataFrame(data=train_on_cor_data)
+
+        uni_on_train_data = {'specified epsilon': list(eps_vals), 'SP disparity':uni_on_train_disp_list, show_loss : uni_on_train_err_list}
+        uni_on_train_performance = pd.DataFrame(data=uni_on_train_data)  
+
+        train_on_uni_data = {'specified epsilon': list(eps_vals), 'SP disparity':train_on_uni_disp_list, show_loss : train_on_uni_err_list}
+        train_on_uni_performance = pd.DataFrame(data=train_on_uni_data)
+
+        if _TEST:
+            train_on_test_data = {'specified epsilon': list(eps_vals), 'SP disparity':train_on_test_disp_list, show_loss : train_on_test_err_list}
+            train_on_test_performance = pd.DataFrame(data=train_on_test_data)
+
+            cor_on_test_data = {'specified epsilon': list(eps_vals), 'SP disparity':cor_on_test_disp_list, show_loss : cor_on_test_err_list}
+            cor_on_test_performance = pd.DataFrame(data=cor_on_test_data)
+
+            uni_on_test_data = {'specified epsilon': list(eps_vals), 'SP disparity':uni_on_test_disp_list, show_loss : uni_on_test_err_list}
+            uni_on_test_performance = pd.DataFrame(data=uni_on_test_data)
+
+
 
         # Print out experiment info.
         print('Train set trade-off:')
         print(train_performance)
+        print("------------------------------------------------")
         print('Coreset set trade-off:')
         print(cor_performance)
-        print('Coreset-Train set trade-off:')
-        print(cor_train_performance)
-        print('Train-Coreset set trade-off:')
-        print(train_cor_performance)
-        # print('Test set trade-off:')
-        # print(test_performance)
+        print("------------------------------------------------")
+        print('Uniform Sketch set trade-off:')
+        print(uni_performance)
+        print("------------------------------------------------")
+
+        print('Coreset Model on Train set trade-off:')
+        print(cor_on_train_performance)
+        print("------------------------------------------------")
+        print('Uniform Model on Train set trade-off:')
+        print(uni_on_train_performance)
+        print("------------------------------------------------")
+
+        if _TEST:
+            print('Train on Test set trade-off:')
+            print(train_on_test_performance)
+            print("------------------------------------------------")
+            
+            print('Cor on Test set trade-off:')
+            print(cor_on_test_performance)
+            print("------------------------------------------------")
+            
+            print('Uni on Test set trade-off:')
+            print(uni_on_test_performance)
+            print("------------------------------------------------")
+
+
+        print('Train Model on Coreset set trade-off:')
+        print(train_on_cor_performance)
+        print("------------------------------------------------")
+        print('Train on Uniform data set trade-off:')
+        print(train_on_uni_performance)
+        print("------------------------------------------------")
 
 
 
 # Sample instantiation of running the fair regeression algorithm
 # eps_list = [0.275, 0.31, 1] # range of specified disparity values
-eps_list = [0.5, 0.75] # range of specified disparity values
+eps_list = [userEps] # range of specified disparity values
 
 n = 200  # size of the sub-sampled dataset, when the flag SMALL is True
 dataset = 'adult'  # name of the data set
@@ -653,21 +687,30 @@ learner = solvers.LeastSquaresLearner(Theta) # Specify a supervised learning ora
 info = str('Dataset: '+dataset + '; loss: ' + loss + '; eps list: '+str(eps_list)) + '; Solver: '+learner.name
 print('Starting experiment. ' + info)
 
+# rvals = [0.5, 1, 1.5, 2]
+# allResults = []
+
+r = userR
+# for r in rvals:
 # Run the fair learning algorithm the supervised learning oracle
-result = fair_train_test(dataset, n, eps_list, learner,
+result = fair_train_test(dataset, n, eps_list, learner, r, 
                           constraint=constraint, loss=loss,
                           random_seed=DATA_SPLIT_SEED)
 
-read_result_list([result])  # A simple print out for the experiment
+'''
+# read_result_list([result])  # A simple print out for the experiment
+
+# print("Done for r = ", r)
 
 # Saving the result list
-outfile = open(info+'.pkl','wb')
+outfile = open(info + str(r) +'.pkl','wb')
 pickle.dump(result, outfile)
 outfile.close()
+'''
+
+
 
 """
-
-
 # Other sample use:
 
 learner1 = solvers.SVM_LP_Learner(off_set=alpha)
