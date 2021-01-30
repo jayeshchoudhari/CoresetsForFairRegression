@@ -40,7 +40,7 @@ userEps = float(sys.argv[2])
 
 
 
-def coresetSample(x, a, y, rval):
+def coresetSample(x, a, y, rval, levScores):
     """
     Randomly subsample a smaller dataset of certain size
     """
@@ -50,13 +50,6 @@ def coresetSample(x, a, y, rval):
     # AkSizes[0] and AkSizes[1]
 
     lGroups = len(AkSizes)
-
-    print("computing svd now...")
-    # svd to get leverage scores
-    u,s,v = np.linalg.svd(x, full_matrices=False)
-    sqrtLevScores = np.linalg.norm(u, 2, 1)
-    levScores = np.square(sqrtLevScores)
-    print("Got the svd...")
 
 
     d = sum(levScores)
@@ -315,7 +308,16 @@ def fair_train_test(dataset, size, eps_list, learner, rval, constraint="DP",
         print("Done for full original data.... for eps = ", eps, "\n\n")
         # ------------------------------------------------------------------------------------------
 
-        for runId in range(1,3):
+        if _CORESET:
+            print("computing svd now...")
+            # svd to get leverage scores
+            u,s,v = np.linalg.svd(x_train, full_matrices=False)
+            sqrtLevScores = np.linalg.norm(u, 2, 1)
+            levScores = np.square(sqrtLevScores)
+            print("Got the svd...")
+
+
+        for runId in range(1,4):
 
             print("RunId = ", runId, " For Epsilon = ", eps, "\n\n")
 
@@ -338,7 +340,7 @@ def fair_train_test(dataset, size, eps_list, learner, rval, constraint="DP",
 
             if _CORESET:
 
-                xcor, acor, ycor, uniqSamples = coresetSample(x_train, a_train, y_train, rval)
+                xcor, acor, ycor, uniqSamples = coresetSample(x_train, a_train, y_train, rval, levScores)
                 print("got the coreset")
 
 
@@ -421,7 +423,7 @@ def fair_train_test(dataset, size, eps_list, learner, rval, constraint="DP",
             read_result_list([result])
 
             # Saving the result list
-            outfile = open("adult-" + str(r) + "-" + str(eps) +'.pkl','wb')
+            outfile = open("adult-" + str(runId) + "-" + str(r) + "-" + str(eps) +'.pkl','wb')
             pickle.dump(result, outfile)
             outfile.close()
 
@@ -678,7 +680,7 @@ def read_result_list(result_list):
 # eps_list = [0.275, 0.31, 1] # range of specified disparity values
 eps_list = [userEps] # range of specified disparity values
 
-n = 200  # size of the sub-sampled dataset, when the flag SMALL is True
+n = 2000  # size of the sub-sampled dataset, when the flag SMALL is True
 dataset = 'adult'  # name of the data set
 constraint = "DP"  # name of the constraint; so far limited to demographic parity (or statistical parity)
 loss = "square"  # name of the loss function
