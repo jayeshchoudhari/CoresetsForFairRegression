@@ -1,0 +1,226 @@
+Starting experiment. Dataset: communities; loss: square; eps list: [0.01]; Solver: OLS
+Running on full original data....
+<function expgrad.<locals>.<lambda> at 0x7fc5ae4f08c8>
+epsilon value:  0.01 : number of oracle calls 63
+Done for full original data.... for eps =  0.01 
+
+
+computing svd now...
+Got the svd...
+RunId =  1  For Epsilon =  0.01 
+
+
+starting to get the coreset....
+Going for sampling...
+num Points Sampled -- for r =  1.5  and uniq num points =  530
+num Points Sampled -- for r =  1.5  and num points =  865
+got the coreset
+Running on the coreset....
+<function expgrad.<locals>.<lambda> at 0x7fc5ae4db7b8>
+epsilon value:  0.01 : number of oracle calls 33
+Evaluating Coreset model on Coreset Sketch...
+Applying Coreset model on Train Data
+Applying Coreset model on Test Data
+Applying Train model on Coreset
+starting to get the uniform sample of size ---.... 530
+Going for sampling...
+num Points Uniformly Sampled after weighing -- for r =  1.5  and num points =  530
+got the unformly sampled points...
+Running on Uniform samples...
+<function expgrad.<locals>.<lambda> at 0x7fc5ae513e18>
+epsilon value:  0.01 : number of oracle calls 45
+Evaluating Uniform model on Uni Sketch...
+Applying Uni model on Train Data
+Applying Uni model on Test Data
+Applying train model on Uniform Sketch
+
+
+
+
+RunId =  1  For Epsilon =  0.01
+Dataset: communities; loss: square; Solver: OLS
+Train set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01          0.01  0.183121
+------------------------------------------------
+Coreset set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01          0.01  0.186974
+------------------------------------------------
+Uniform Sketch set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01          0.01  0.179781
+------------------------------------------------
+Coreset Model on Train set trade-off:
+   specified epsilon  SP disparity     RMSE
+0               0.01      0.031137  0.19456
+------------------------------------------------
+Uniform Model on Train set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01      0.047237  0.191056
+------------------------------------------------
+Train on Test set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01      0.060954  0.197848
+------------------------------------------------
+Cor on Test set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01      0.041695  0.213736
+------------------------------------------------
+Uni on Test set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01      0.052038  0.210593
+------------------------------------------------
+Train Model on Coreset set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01      0.027585  0.186359
+------------------------------------------------
+Train on Uniform data set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01      0.032637  0.190032
+------------------------------------------------
+RunId =  2  For Epsilon =  0.01 
+
+
+starting to get the coreset....
+Going for sampling...
+num Points Sampled -- for r =  1.5  and uniq num points =  526
+num Points Sampled -- for r =  1.5  and num points =  849
+got the coreset
+Running on the coreset....
+<function expgrad.<locals>.<lambda> at 0x7fc5ae4dbd90>
+epsilon value:  0.01 : number of oracle calls 39
+Evaluating Coreset model on Coreset Sketch...
+Applying Coreset model on Train Data
+Applying Coreset model on Test Data
+Applying Train model on Coreset
+starting to get the uniform sample of size ---.... 526
+Going for sampling...
+num Points Uniformly Sampled after weighing -- for r =  1.5  and num points =  526
+got the unformly sampled points...
+Running on Uniform samples...
+<function expgrad.<locals>.<lambda> at 0x7fc5ae4968c8>
+epsilon value:  0.01 : number of oracle calls 39
+Evaluating Uniform model on Uni Sketch...
+Applying Uni model on Train Data
+Applying Uni model on Test Data
+Applying train model on Uniform Sketch
+
+
+
+
+RunId =  2  For Epsilon =  0.01
+Dataset: communities; loss: square; Solver: OLS
+Train set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01          0.01  0.183121
+------------------------------------------------
+Coreset set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01          0.01  0.192808
+------------------------------------------------
+Uniform Sketch set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01          0.01  0.165184
+------------------------------------------------
+Coreset Model on Train set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01       0.02462  0.187312
+------------------------------------------------
+Uniform Model on Train set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01      0.028038  0.194877
+------------------------------------------------
+Train on Test set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01      0.060954  0.197848
+------------------------------------------------
+Cor on Test set trade-off:
+   specified epsilon  SP disparity    RMSE
+0               0.01      0.046821  0.2048
+------------------------------------------------
+Uni on Test set trade-off:
+   specified epsilon  SP disparity     RMSE
+0               0.01      0.036221  0.20951
+------------------------------------------------
+Train Model on Coreset set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01       0.01786  0.195923
+------------------------------------------------
+Train on Uniform data set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01      0.031026  0.180664
+------------------------------------------------
+RunId =  3  For Epsilon =  0.01 
+
+
+starting to get the coreset....
+Going for sampling...
+num Points Sampled -- for r =  1.5  and uniq num points =  532
+num Points Sampled -- for r =  1.5  and num points =  872
+got the coreset
+Running on the coreset....
+<function expgrad.<locals>.<lambda> at 0x7fc5ae4f01e0>
+epsilon value:  0.01 : number of oracle calls 37
+Evaluating Coreset model on Coreset Sketch...
+Applying Coreset model on Train Data
+Applying Coreset model on Test Data
+Applying Train model on Coreset
+starting to get the uniform sample of size ---.... 532
+Going for sampling...
+num Points Uniformly Sampled after weighing -- for r =  1.5  and num points =  532
+got the unformly sampled points...
+Running on Uniform samples...
+<function expgrad.<locals>.<lambda> at 0x7fc5ae56c730>
+epsilon value:  0.01 : number of oracle calls 52
+Evaluating Uniform model on Uni Sketch...
+Applying Uni model on Train Data
+Applying Uni model on Test Data
+Applying train model on Uniform Sketch
+
+
+
+
+RunId =  3  For Epsilon =  0.01
+Dataset: communities; loss: square; Solver: OLS
+Train set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01          0.01  0.183121
+------------------------------------------------
+Coreset set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01          0.01  0.189745
+------------------------------------------------
+Uniform Sketch set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01          0.01  0.165352
+------------------------------------------------
+Coreset Model on Train set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01      0.023418  0.193743
+------------------------------------------------
+Uniform Model on Train set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01       0.02427  0.201099
+------------------------------------------------
+Train on Test set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01      0.060954  0.197848
+------------------------------------------------
+Cor on Test set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01      0.037405  0.210958
+------------------------------------------------
+Uni on Test set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01      0.066108  0.211104
+------------------------------------------------
+Train Model on Coreset set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01      0.025962  0.188812
+------------------------------------------------
+Train on Uniform data set trade-off:
+   specified epsilon  SP disparity      RMSE
+0               0.01      0.059596  0.184768
+------------------------------------------------
+done with epsilon 0.01
